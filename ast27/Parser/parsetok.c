@@ -67,6 +67,25 @@ Ta27Parser_ParseStringFlagsFilenameEx(const char *s, const char *filename,
     return parsetok(tok, g, start, err_ret, flags);
 }
 
+#if PY_MAJOR_VERSION == 2
+char *
+PyUnicode_AsUTF8(PyObject *unicode) {
+    PyObject *bytestring;
+    char *string;
+
+    bytestring = PyUnicode_AsUTF8String(unicode);
+    if (bytestring == NULL)
+        return NULL;
+
+    // TODO this leaks a reference
+    string = PyString_AsString(bytestring);
+    if (string == NULL) {
+        return NULL;
+    }
+    return strdup(string);
+}
+#endif
+
 node *
 Ta27Parser_ParseStringObject(const char *s, PyObject *filename,
                            grammar *g, int start,

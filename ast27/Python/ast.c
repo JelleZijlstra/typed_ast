@@ -41,8 +41,10 @@ static PyObject *parsenumber(struct compiling *, const char *);
 static PyObject *parsestr(struct compiling *, const node *n, const char *);
 static PyObject *parsestrplus(struct compiling *, const node *n);
 
+#if PY_MAJOR_VERSION == 3
 static int Py_Py3kWarningFlag = 0;
 static int Py_UnicodeFlag = 0;
+#endif
 
 extern long Ta27OS_strtol(char *str, char **ptr, int base);
 
@@ -52,6 +54,32 @@ extern long Ta27OS_strtol(char *str, char **ptr, int base);
 
 #define COMP_GENEXP 0
 #define COMP_SETCOMP  1
+
+#if PY_MAJOR_VERSION == 2
+static PyObject*
+PyUnicode_InternFromString(const char* n) {
+    /* this doesn't actually intern it, but whatever */
+    return PyUnicode_FromString(n);
+}
+
+char *
+PyUnicode_AsUTF8(PyObject *unicode) {
+    PyObject *bytestring;
+    char *string;
+
+    bytestring = PyUnicode_AsUTF8String(unicode);
+    if (bytestring == NULL)
+        return NULL;
+
+    // TODO this leaks a reference
+    string = PyString_AsString(bytestring);
+    if (string == NULL) {
+        return NULL;
+    }
+    return strdup(string);
+}
+#define _PyUnicode_AsString PyUnicode_AsUTF8
+#endif
 
 static identifier
 new_identifier(const char* n, PyArena *arena) {
@@ -3602,14 +3630,31 @@ decode_unicode(struct compiling *c, const char *s, size_t len, int rawmode, cons
             }
             if (*s & 0x80) { /* XXX inefficient */
                 PyObject *w;
+#if PY_MAJOR_VERSION == 2
+                char *r;
+#else
                 int kind;
                 void *data;
+#endif
                 Py_ssize_t len, i;
                 w = decode_utf8(c, &s, end);
                 if (w == NULL) {
                     Py_DECREF(u);
                     return NULL;
                 }
+#if PY_MAJOR_VERSION == 2
+                r = PyString_AsString(w);
+                len = PyString_Size(w);
+                assert(len % 4 == 0);
+                for (i = 0; i < len; i += 4) {
+                        sprintf(p, "\\U%02x%02x%02x%02x",
+                                r[i + 0] & 0xFF,
+                                r[i + 1] & 0xFF,
+                                r[i + 2] & 0xFF,
+                                r[i + 3] & 0xFF);
+                        p += 10;
+                }
+#else
                 kind = PyUnicode_KIND(w);
                 data = PyUnicode_DATA(w);
                 len = PyUnicode_GET_LENGTH(w);
@@ -3620,6 +3665,7 @@ decode_unicode(struct compiling *c, const char *s, size_t len, int rawmode, cons
                 }
                 /* Should be impossible to overflow */
                 assert(p - buf <= Py_SIZE(u));
+#endif
                 Py_DECREF(w);
             } else {
                 *p++ = *s++;

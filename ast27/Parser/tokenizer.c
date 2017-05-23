@@ -19,7 +19,7 @@
 #include "pydebug.h"
 #endif /* PGEN */
 
-#if PY_MINOR_VERSION >= 4
+#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 4
 PyAPI_FUNC(char *) PyOS_Readline(FILE *, FILE *, const char *);
 #else
 PyAPI_FUNC(char *) PyOS_Readline(FILE *, FILE *, char *);
@@ -481,8 +481,6 @@ static int
 fp_setreadl(struct tok_state *tok, const char* enc)
 {
     PyObject *readline = NULL, *stream = NULL, *io = NULL;
-    _Py_IDENTIFIER(open);
-    _Py_IDENTIFIER(readline);
     int fd;
     long pos;
 
@@ -503,13 +501,13 @@ fp_setreadl(struct tok_state *tok, const char* enc)
         goto cleanup;
     }
 
-    stream = _PyObject_CallMethodId(io, &PyId_open, "isisOOO",
+    stream = PyObject_CallMethod(io, "open", "isisOOO",
                     fd, "r", -1, enc, Py_None, Py_None, Py_False);
     if (stream == NULL)
         goto cleanup;
 
     Py_XDECREF(tok->decoding_readline);
-    readline = _PyObject_GetAttrId(stream, &PyId_readline);
+    readline = PyObject_GetAttrString(stream, "readline");
     tok->decoding_readline = readline;
     if (pos > 0) {
         if (PyObject_CallObject(readline, NULL) == NULL) {

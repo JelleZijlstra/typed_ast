@@ -1,6 +1,4 @@
 import sys
-if sys.version_info[0] < 3 or sys.version_info[1] < 3:
-    sys.exit('Error: typed_ast only runs on Python 3.3 and above.')
 
 try:
     from setuptools import setup, Extension
@@ -21,6 +19,7 @@ _ast27 = Extension(
         'ast27/Parser/tokenizer.c',
         'ast27/Python/asdl.c',
         'ast27/Python/ast.c',
+        'ast27/Python/compat.c',
         'ast27/Python/graminit.c',
         'ast27/Python/mystrtoul.c',
         'ast27/Python/Python-ast.c',
@@ -30,6 +29,7 @@ _ast27 = Extension(
         'ast27/Include/asdl.h',
         'ast27/Include/ast.h',
         'ast27/Include/bitset.h',
+        'ast27/Include/compat.h',
         'ast27/Include/compile.h',
         'ast27/Include/errcode.h',
         'ast27/Include/graminit.h',
